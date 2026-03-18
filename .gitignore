@@ -1,0 +1,19 @@
+node_modules/
+.next/
+.env
+dist/
+uploads/
+*.log
+.DS_Store
+
+# Backend Specific
+backend/node_modules/
+backend/data/
+backend/uploads/
+backend/.env
+
+# Frontend Specific
+frontend/node_modules/
+frontend/.next/
+frontend/.env
+frontend/.env.local
