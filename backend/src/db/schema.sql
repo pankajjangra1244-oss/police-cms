@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS complaints (
   incident_type VARCHAR(100) NOT NULL,
   date_time TIMESTAMP WITH TIME ZONE,
   location VARCHAR(500),
+  state VARCHAR(100),
+  district VARCHAR(100),
   latitude DECIMAL(10, 8),
   longitude DECIMAL(11, 8),
   description TEXT,

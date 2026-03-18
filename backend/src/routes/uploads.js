@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db/pool');
+const pool = require('../db/pool');
 const { authenticateToken } = require('../middleware/auth');
 const fs = require('fs');
 
@@ -30,20 +30,23 @@ router.post('/:complaintId', authenticateToken, upload.array('files', 10), async
     const { complaintId } = req.params;
     if (!req.files?.length) return res.status(400).json({ error: 'No files uploaded' });
 
-    const complaint = await db.complaints.findOneAsync({ _id: complaintId });
-    if (!complaint) return res.status(404).json({ error: 'Complaint not found' });
+    const compResult = await pool.query('SELECT * FROM complaints WHERE id = $1', [complaintId]);
+    if (compResult.rows.length === 0) return res.status(404).json({ error: 'Complaint not found' });
 
-    const now = new Date().toISOString();
-    const insertedFiles = await Promise.all(req.files.map(async file => {
+    const insertedFiles = [];
+    for (const file of req.files) {
       const relativePath = path.relative(path.join(__dirname, '../..'), file.path).replace(/\\/g, '/');
-      const doc = await db.evidence.insertAsync({
-        _id: uuidv4(), complaint_id: complaintId, file_name: file.originalname,
-        file_path: relativePath, file_type: file.mimetype.split('/')[0],
-        file_size: file.size, mime_type: file.mimetype,
-        uploaded_by: req.user.id, uploaded_at: now
-      });
-      return { ...doc, id: doc._id };
-    }));
+      
+      const insertSql = `
+        INSERT INTO evidence (complaint_id, file_name, file_path, file_type, file_size, mime_type, uploaded_by) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *
+      `;
+      const docRes = await pool.query(insertSql, [
+        complaintId, file.originalname, relativePath, 
+        file.mimetype.split('/')[0], file.size, file.mimetype, req.user.id
+      ]);
+      insertedFiles.push(docRes.rows[0]);
+    }
 
     res.status(201).json({ message: `${insertedFiles.length} file(s) uploaded`, files: insertedFiles });
   } catch (err) {
@@ -55,8 +58,8 @@ router.post('/:complaintId', authenticateToken, upload.array('files', 10), async
 // GET /api/uploads/:complaintId
 router.get('/:complaintId', authenticateToken, async (req, res) => {
   try {
-    const files = await db.evidence.findAsync({ complaint_id: req.params.complaintId }).sort({ uploaded_at: -1 });
-    res.json(files.map(f => ({ ...f, id: f._id })));
+    const result = await pool.query('SELECT * FROM evidence WHERE complaint_id = $1 ORDER BY uploaded_at DESC', [req.params.complaintId]);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch evidence' });
   }
@@ -65,11 +68,14 @@ router.get('/:complaintId', authenticateToken, async (req, res) => {
 // DELETE /api/uploads/file/:id
 router.delete('/file/:id', authenticateToken, async (req, res) => {
   try {
-    const file = await db.evidence.findOneAsync({ _id: req.params.id });
-    if (!file) return res.status(404).json({ error: 'File not found' });
+    const fileResult = await pool.query('SELECT * FROM evidence WHERE id = $1', [req.params.id]);
+    if (fileResult.rows.length === 0) return res.status(404).json({ error: 'File not found' });
+    
+    const file = fileResult.rows[0];
     const filePath = path.join(__dirname, '../..', file.file_path);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    await db.evidence.removeAsync({ _id: req.params.id }, {});
+    
+    await pool.query('DELETE FROM evidence WHERE id = $1', [req.params.id]);
     res.json({ message: 'File deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete file' });
