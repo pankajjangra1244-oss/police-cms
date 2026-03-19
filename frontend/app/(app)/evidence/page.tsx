@@ -51,7 +51,19 @@ export default function EvidencePage() {
   }, [selectedId]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop, accept: { 'image/*': [], 'video/*': [], 'audio/*': [], 'application/pdf': [] },
+    onDrop, accept: { 
+      'image/*': [], 
+      'video/*': [], 
+      'audio/*': [], 
+      'application/pdf': [],
+      'application/msword': [],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [],
+      'application/vnd.ms-excel': [],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [],
+      'text/csv': [],
+      'text/plain': [],
+      'application/zip': []
+    },
     maxSize: 50 * 1024 * 1024, disabled: !selectedId || uploading,
   });
 
@@ -104,7 +116,7 @@ export default function EvidencePage() {
         ) : (
           <>
             <p className="text-white font-medium mb-1">{selectedId ? 'Drag files here or click to upload' : 'Select a complaint above first'}</p>
-            <p className="text-slate-500 text-sm">Photos, Videos, Audio, PDF — Max 50MB per file</p>
+            <p className="text-slate-500 text-sm">Photos, Videos, Audio, PDF, Docs, Excel, CSV, Zip — Max 50MB per file</p>
           </>
         )}
       </div>

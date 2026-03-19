@@ -18,24 +18,22 @@ cloudinary.config({
 // Use memory storage — files go straight to cloud, never touch disk
 const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
-  const allowed = [
-    'image/jpeg','image/png','image/gif','image/webp',
-    'video/mp4','video/mpeg','audio/mpeg','audio/wav','audio/ogg','application/pdf'
-  ];
-  allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('File type not allowed'), false);
+  // Allow all file types for comprehensive evidence gathering
+  cb(null, true);
 };
 const upload = multer({ storage, fileFilter, limits: { fileSize: 50 * 1024 * 1024 } });
 
 // Helper: upload buffer to Cloudinary
 const uploadToCloudinary = (buffer, originalname, mimetype) => {
   return new Promise((resolve, reject) => {
-    const resourceType = mimetype.startsWith('video') ? 'video' : mimetype.startsWith('audio') ? 'video' : 'image';
-    const isPdf = mimetype === 'application/pdf';
+    let resourceType = 'raw';
+    if (mimetype.startsWith('image/')) resourceType = 'image';
+    if (mimetype.startsWith('video/') || mimetype.startsWith('audio/')) resourceType = 'video';
 
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: 'police-cms-evidence',
-        resource_type: isPdf ? 'raw' : resourceType,
+        resource_type: resourceType,
         public_id: `${uuidv4()}-${originalname.replace(/[^a-zA-Z0-9.]/g, '_')}`,
       },
       (error, result) => {
