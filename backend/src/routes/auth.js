@@ -14,6 +14,19 @@ router.post('/login', async (req, res) => {
     if (!badge_number || !password)
       return res.status(400).json({ error: 'Badge number and password are required' });
 
+    // Check if database needs seeding before logging in
+    const countCheck = await pool.query('SELECT COUNT(*) FROM users');
+    if (parseInt(countCheck.rows[0].count) === 0) {
+      console.log('Auto-seeding database because users table is empty...');
+      await pool.query(`
+        INSERT INTO users (name, badge_number, email, password_hash, role, department)
+        VALUES 
+        ('Admin Officer', 'ADMIN001', 'admin@policecms.gov', '$2a$10$rOzJqn4Q0k/DHpBe5lP7S.IYwJ3U4VJ7kCmP4YHqA5T1p7xK1lc3a', 'admin', 'Headquarters'),
+        ('John Kumar', 'OFF001', 'john.kumar@policecms.gov', '$2a$10$rOzJqn4Q0k/DHpBe5lP7S.IYwJ3U4VJ7kCmP4YHqA5T1p7xK1lc3a', 'officer', 'Crime Branch')
+        ON CONFLICT (badge_number) DO NOTHING;
+      `);
+    }
+
     const result = await pool.query('SELECT * FROM users WHERE badge_number = $1 AND is_active = true', [badge_number]);
     const user = result.rows[0];
     
