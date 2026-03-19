@@ -43,7 +43,10 @@ export default function EvidencePage() {
       const res = await uploadsAPI.list(selectedId);
       setEvidence(res.data);
       toast.success(`${files.length} file(s) uploaded!`);
-    } catch { toast.error('Upload failed'); }
+    } catch (err: any) { 
+      const msg = err.response?.data?.error || err.message || 'Upload failed';
+      toast.error(msg);
+    }
     finally { setUploading(false); }
   }, [selectedId]);
 
@@ -128,7 +131,8 @@ export default function EvidencePage() {
                     <p className="text-slate-500 text-xs mt-0.5">{f.mime_type} • {(f.file_size / 1024).toFixed(1)} KB • {format(new Date(f.uploaded_at), 'dd MMM yyyy')}</p>
                   </div>
                   <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <a href={`/${f.file_path}`} target="_blank" rel="noopener noreferrer"
+                    <a href={f.file_path?.startsWith('http') ? f.file_path : `https://police-cms.onrender.com/${f.file_path}`} 
+                      target="_blank" rel="noopener noreferrer"
                       className="btn-secondary py-1.5 px-3 text-xs">View</a>
                     <button onClick={() => handleDelete(f.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all">
                       <Trash2 className="w-4 h-4" />
