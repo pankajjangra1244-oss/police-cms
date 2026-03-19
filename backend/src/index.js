@@ -35,6 +35,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// One-time database seed endpoint
+app.get('/api/seed', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const pool = require('./db/pool');
+
+    const adminHash = await bcrypt.hash('Admin@123', 10);
+    const officerHash = await bcrypt.hash('Officer@123', 10);
+
+    await pool.query(`
+      INSERT INTO users (name, badge_number, email, password_hash, role, department)
+      VALUES 
+        ('Admin Officer', 'ADMIN001', 'admin@policecms.gov', $1, 'admin', 'Headquarters'),
+        ('John Kumar', 'OFF001', 'john.kumar@policecms.gov', $2, 'officer', 'Crime Branch')
+      ON CONFLICT (badge_number) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+    `, [adminHash, officerHash]);
+
+    res.json({ success: true, message: 'Database seeded! ADMIN001/Admin@123 and OFF001/Officer@123 are ready.' });
+  } catch (err) {
+    console.error('Seed error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);

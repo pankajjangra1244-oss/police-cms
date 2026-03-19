@@ -30,7 +30,11 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${user.name}!`);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+      const apiError = err.response?.data?.error || err.response?.data || err.message;
+      const errorMsg = typeof apiError === 'object' 
+        ? apiError.message || JSON.stringify(apiError) 
+        : String(apiError);
+      setError(errorMsg || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
